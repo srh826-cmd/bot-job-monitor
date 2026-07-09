@@ -66,7 +66,7 @@ def fetch_and_analyze():
     with st.spinner("🧠 Gemini API 正在翻閱前兩頁並精準對齊職缺內頁網址..."):
         try:
             genai.configure(api_key=api_key)
-            model = genai.GenerativeModel(model_name="gemini-1.5-flash-latest")
+            model = genai.GenerativeModel(model_name="gemini-2.5-flash")
             
             prompt = f"""
             你是一個專業的網頁資料分析專家。以下是中華民國國家文化藝術基金會（國藝會）求才公告網頁（前兩頁）的對照文字。
