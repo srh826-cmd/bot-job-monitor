@@ -37,7 +37,7 @@ def fetch_and_analyze():
         try:
             # 這是 google-generativeai 套件的標準設定與呼叫方式
             genai.configure(api_key=api_key)
-            model = genai.GenerativeModel(model_name="gemini-1.5-flash")
+            model = genai.GenerativeModel(model_name="gemini-1.5-flash-latest")
             
             prompt = f"""
             你是一個專業的資料萃取專家。以下是中華民國國家文化藝術基金會（國藝會）求才公告網頁的純文字內容。
