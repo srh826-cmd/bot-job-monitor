@@ -1,4 +1,3 @@
-Pillow==10.3.0
 streamlit
 requests
 beautifulsoup4
