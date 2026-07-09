@@ -7,7 +7,7 @@ import json
 # 1. 網頁基本設定
 st.set_page_config(page_title="國藝會求才自動化追蹤器", page_icon="🎨", layout="centered")
 st.title("🎨 國藝會求才自動化追蹤器")
-st.caption("使用 Streamlit + Google AI Studio (Gemini 2.0 Flash) 自動語意萃取")
+st.caption("使用 Streamlit + Google AI Studio (gemini-2.5-flash) 自動語意萃取")
 
 # 2. 安全取得 Gemini API Key (相容本地與雲端)
 if "GEMINI_API_KEY" in st.secrets:
@@ -37,7 +37,7 @@ def fetch_and_analyze():
         try:
             # 這是 google-generativeai 套件的標準設定與呼叫方式
             genai.configure(api_key=api_key)
-            model = genai.GenerativeModel(model_name="gemini-1.5-flash-latest")
+            model = genai.GenerativeModel(model_name="gemini-2.5-flash")
             
             prompt = f"""
             你是一個專業的資料萃取專家。以下是中華民國國家文化藝術基金會（國藝會）求才公告網頁的純文字內容。
