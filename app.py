@@ -27,7 +27,7 @@ def fetch_and_analyze():
         try:
             # 💡 為了防範單日職缺超過 12 筆被擠到下一頁，我們連續巡邏 page=0 和 page=1 (前兩頁)
             for page_num in range(0, 2):
-                url = f"https://www.ncafroc.org.tw/recruitment?page={page_num}&organizationId=&salaryType=&salaryRange=&organizationName=&publishTime=TODAY"
+                url = f"https://www.ncafroc.org.tw/recruitment?page={page_num}&organizationId=&salaryType=&salaryRange=&organizationName=&publishTime=WEEK"
                 
                 headers = {
                     "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
