@@ -6,8 +6,8 @@ import json
 from datetime import datetime
 
 # 1. 網頁基本設定
-st.set_page_config(page_title="國藝會求才自動化追蹤器", page_icon="🎨", layout="centered")
-st.title("🎨 國藝會求才自動化追蹤器")
+st.set_page_config(page_title="國藝會職缺自動化追蹤器", page_icon="🎨", layout="centered")
+st.title("🎨 國藝會職缺自動化追蹤器")
 st.caption("使用 Streamlit + Google AI Studio (Gemini 3.1 Flash-Lite 核心) 本週求才表格測試")
 
 # 2. 安全取得 Gemini API Key
@@ -143,13 +143,12 @@ def generate_html_email_report(jobs_list):
         return f"HTML 報告生成失敗: {e}"
 
 # 5. 網頁 UI 互動介面
-if st.button("🚀 立即更新本週職缺 (商務表格測試完全體)", type="primary"):
+if st.button("🚀 立即更新本週職缺 (商務表格測試)", type="primary"):
     data = fetch_and_analyze()
     
     if data:
         st.success(f"🎉 測試成功！已成功撈回第一頁共 {len(data)} 筆精簡職缺進行表格測試！")
         
-        # 用來 Double Check 的折疊清單
         with st.expander("🔍 點此展開「職缺原始清單」以進行資料 Double Check"):
             for index, job in enumerate(data):
                 with st.container():
@@ -162,29 +161,10 @@ if st.button("🚀 立即更新本週職缺 (商務表格測試完全體)", type
                     st.divider()
         
         st.subheader("📋 本週職缺 Email 商務表格報告 (預覽測試)")
-        st.info("💡 超流暢複製指南：滑鼠去點下方「點此一鍵秒全選」的文字框，內容就會瞬間自動全選，此時直接按鍵盤 Ctrl+C 複製，去信箱內文貼上即可完美呈現表格！")
         
         html_email_content = generate_html_email_report(data)
         
-        # 🌟 透過原生文字域結合自動選取腳本，徹底繞過瀏覽器的沙盒安全限制！
-        # 當你複製這個文字域的內容貼進 Gmail，Gmail 會自動將其解析為「漂亮的格式化表格與超連結」
-        st.caption("👇 請點擊下方框框，即可觸發自動全選：")
-        st.components.v1.html(f"""
-            <textarea id="email-text-area" readonly 
-                onclick="this.select();" 
-                style="width:100%; height:120px; font-family:monospace; font-size:14px; padding:10px; border:2px solid #4CAF50; border-radius:4px; cursor:pointer;"
-            >{html_email_content}</textarea>
-            <script>
-                // 網頁加載完畢自動聚焦，讓用戶體驗更流暢
-                document.getElementById('email-text-area').addEventListener('click', function() {{
-                    this.select();
-                }});
-            </script>
-        """, height=140)
-        
-        st.write("---")
-        st.caption("📊 視覺效果對照區（供你在網頁上肉眼核對使用）：")
-        # 畫面上依然保留這個漂亮的表格，讓你肉眼對帳、Double Check 用
+        # 🌟 乾淨直覺呈現在白色區塊內，再也沒有任何複雜的複製按鈕，滑鼠直接往下反白即可！
         st.markdown(
             f'<div style="border:1px solid #ddd; padding:20px; border-radius:5px; background-color: #ffffff; color: #000000;">'
             f'{html_email_content}'
