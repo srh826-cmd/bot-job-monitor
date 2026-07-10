@@ -148,16 +148,21 @@ if st.button("🚀 立即更新本週職缺 (精簡單頁+雙贏報告測試)", 
         
         # 💡 雙贏 UI 呈現區塊
         st.subheader("📋 職缺 Email 報告範本 (測試)")
-        st.info("💡 點開折疊區可以點選藍色超連結測試，下方文字框點進去按 Ctrl+A 即可全選複製！")
         
         email_content = generate_email_report(data)
         
-        # 1. 點擊連結區
+        # 💡 核心魔法：利用 Python 的 .replace() 把複製區與文字框裡的星號（*）全部擦掉！
+        clean_email_content = email_content.replace("**", "").replace("*", "")
+        
+        # 🌟 1. 一鍵複製大按鈕（餵給它完全沒有星號的乾淨純文字！）
+        st.clipboard(clean_email_content, label="📋 點此按鈕：一鍵複製乾淨純文字 Email 報告")
+        
+        # 🌟 2. 點擊連結預覽區（維持原本的 email_content，這樣它才能在網頁上漂亮地渲染出藍色超連結）
         with st.expander("👀 點此展開「可直接點擊連結」的報告預覽"):
             st.markdown(email_content)
             
-        # 2. 複製專用區塊
-        st.text_area("📄 複製專用區塊 (支援全選複製)", value=email_content, height=350)
+        # 🌟 3. 純文字備份框（也是餵給它完全去背的乾淨文字）
+        st.text_area("📄 報告純文字備份框 (完全去除星號)", value=clean_email_content, height=350)
         
     else:
         st.info("目前沒有抓到職缺，請確認網頁內容。")
