@@ -5,9 +5,9 @@ import google.generativeai as genai
 import json
 
 # 1. 網頁基本設定
-st.set_page_config(page_title="國藝會求才自動化追蹤器", page_icon="🎨", layout="centered")
-st.title("🎨 國藝會求才自動化追蹤器")
-st.caption("使用 Streamlit + Google AI Studio (Gemini 2.5 Flash) 本週單頁雙贏報告測試版")
+st.set_page_config(page_title="國藝會職缺自動化追蹤器", page_icon="🎨", layout="centered")
+st.title("🎨 國藝會職缺自動化追蹤器")
+st.caption("使用 Streamlit + Google AI Studio (Gemini 2.5 Flash) 本週單頁報告測試版")
 
 # 2. 安全取得 Gemini API Key (相容本地與雲端)
 if "GEMINI_API_KEY" in st.secrets:
