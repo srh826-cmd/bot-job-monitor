@@ -7,7 +7,7 @@ import json
 # 1. 網頁基本設定
 st.set_page_config(page_title="國藝會求才自動化追蹤器", page_icon="🎨", layout="centered")
 st.title("🎨 國藝會求才自動化追蹤器")
-st.caption("使用 Streamlit + Google AI Studio (Gemini 2.5 Flash) 本週單頁精簡報告測試版")
+st.caption("使用 Streamlit + Google AI Studio (Gemini 2.5 Flash) 本週單頁雙贏報告測試版")
 
 # 2. 安全取得 Gemini API Key (相容本地與雲端)
 if "GEMINI_API_KEY" in st.secrets:
@@ -25,7 +25,7 @@ def fetch_and_analyze():
     
     with st.spinner("🔄 正在巡邏擷取「本週第一頁」精簡資訊進行測試..."):
         try:
-            # 💡 精簡優化：只抓 page=0 (第一頁的 12 筆職缺)
+            # 💡 測試模式：只抓本週的第一頁網址，並強制加上 .strip() 防禦
             url = "https://www.ncafroc.org.tw/recruitment?page=0&organizationId=&salaryType=&salaryRange=&organizationName=&publishTime=WEEK".strip()
             
             headers = {
@@ -96,7 +96,7 @@ def fetch_and_analyze():
             st.error(f"Gemini 分析失敗: {e}")
             return None
 
-# 4. Email 報告文字生成功能 (輕量化)
+# 4. Email 報告文字生成功能
 def generate_email_report(jobs_list):
     if not jobs_list:
         return "本週國藝會無更新職缺，無需發送報告。"
@@ -129,7 +129,7 @@ def generate_email_report(jobs_list):
         return f"Email 報告生成失敗: {e}"
 
 # 5. 網頁 UI 互動介面
-if st.button("🚀 立即更新本週職缺 (精簡單頁+報告測試)", type="primary"):
+if st.button("🚀 立即更新本週職缺 (精簡單頁+雙贏報告測試)", type="primary"):
     data = fetch_and_analyze()
     
     if data:
@@ -146,12 +146,18 @@ if st.button("🚀 立即更新本週職缺 (精簡單頁+報告測試)", type="
                     st.markdown(f"[🔗 點此直接進入該職缺詳細內容頁面]({job.get('link')})")
                 st.divider()
         
-        # 自動生成 Email 報告區塊
-        st.subheader("📋 職缺 Email 報告範本 (精簡測試)")
-        st.info("💡 提示：點擊右側的「Copy」按鈕即可一鍵複製，直接貼進信箱寄出！")
+        # 💡 雙贏 UI 呈現區塊
+        st.subheader("📋 職缺 Email 報告範本 (測試)")
+        st.info("💡 點開折疊區可以點選藍色超連結測試，下方文字框點進去按 Ctrl+A 即可全選複製！")
         
         email_content = generate_email_report(data)
-        st.code(email_content, language="text")
+        
+        # 1. 點擊連結區
+        with st.expander("👀 點此展開「可直接點擊連結」的報告預覽"):
+            st.markdown(email_content)
+            
+        # 2. 複製專用區塊
+        st.text_area("📄 複製專用區塊 (支援全選複製)", value=email_content, height=350)
         
     else:
         st.info("目前沒有抓到職缺，請確認網頁內容。")
