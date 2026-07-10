@@ -160,7 +160,7 @@ if st.button("🚀 立即更新本週職缺 (商務表格測試)", type="primary
                         st.markdown(f"💰 薪資: {job.get('salary', '未知')} | [🔗 詳細內容頁面]({job.get('link')})")
                     st.divider()
         
-        st.subheader("📋 本週職缺 Email 商務表格報告 (預覽測試)")
+        st.subheader("📋 本週職缺 Email 表格報告")
         
         html_email_content = generate_html_email_report(data)
         
