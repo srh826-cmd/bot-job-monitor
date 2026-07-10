@@ -134,7 +134,7 @@ def generate_email_report(jobs_list):
         return f"Email 報告生成失敗: {e}"
 
 # 5. 網頁 UI 互動介面
-if st.button("🚀 立即更新本週職缺 (精簡單頁+雙贏報告測試)", type="primary"):
+if st.button("🚀 立即更新本週職缺 (精簡單頁+報告測試)", type="primary"):
     data = fetch_and_analyze()
     
     if data:
