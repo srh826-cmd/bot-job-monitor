@@ -160,7 +160,7 @@ if st.button("🚀 立即更新本週職缺 (商務表格測試版)", type="prim
         st.subheader("📋 本週職缺 Email 商務表格報告 (預覽測試)")
         st.info("💡 提示：請直接用滑鼠從「Dear all」一路往下拖曳反白至表格結束，按 Ctrl+C 複製，貼進信箱即可完美保留所有格線與超連結！")
         
-        html_email_content = generate_email_report(data)
+        html_email_content = generate_html_email_report(data)
         
         # 🌟 透過內嵌 HTML 把商務表格在網頁畫面上亮麗呈現，方便你直接拖曳複製
         st.markdown(
