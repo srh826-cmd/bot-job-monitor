@@ -143,7 +143,7 @@ def generate_html_email_report(jobs_list):
         return f"HTML 報告生成失敗: {e}"
 
 # 5. 網頁 UI 互動介面
-if st.button("🚀 立即更新本週職缺 (商務表格測試完全體)", type="primary"):
+if st.button("🚀 立即更新本週職缺 (商務表格測試)", type="primary"):
     data = fetch_and_analyze()
     
     if data:
