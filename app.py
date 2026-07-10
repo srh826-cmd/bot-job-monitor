@@ -8,7 +8,7 @@ from datetime import datetime
 # 1. 網頁基本設定
 st.set_page_config(page_title="國藝會職缺自動化追蹤器", page_icon="🎨", layout="centered")
 st.title("🎨 國藝會職缺自動化追蹤器")
-st.caption("使用 Streamlit + Google AI Studio (Gemini 2.5 Flash) 本週職缺商務表格測試")
+st.caption("使用 Streamlit + Google AI Studio (Gemini 2.5 Pro) 表格測試版")
 
 # 2. 安全取得 Gemini API Key
 if "GEMINI_API_KEY" in st.secrets:
@@ -64,12 +64,13 @@ def fetch_and_analyze():
     if not html_snapshot.strip():
         return []
 
-    with st.spinner("🧠 Gemini API 正在以最省配額模式分析本週職缺與薪資..."):
+    with st.spinner("🧠 Gemini Pro 正在深度分析職缺與薪資..."):
         try:
             genai.configure(api_key=api_key)
             
+            # 💡 關鍵修正：大腦升級為旗艦型號 "gemini-2.5-pro"
             model = genai.GenerativeModel(
-                model_name="gemini-2.5-flash",
+                model_name="gemini-2.5-pro",
                 generation_config={"response_mime_type": "application/json"}
             )
             
@@ -80,7 +81,7 @@ def fetch_and_analyze():
             【嚴格規範】
             1. 必須輸出符合 JSON Array 的格式，不要包含 ```json 等 Markdown 標籤。
             2. 每個物件必須包含五個欄位：
-               - "date": 職缺公告或更新日期 (請根據網頁實際文字填寫，格式如: 2026-07-10)
+               - "date": 職缺公告或更新日期 (請根據網頁實際文字填寫)
                - "organization": 求才單位名稱
                - "title": 職缺職稱
                - "link": 請精準填寫該職缺對應的詳細內頁網址。
@@ -104,7 +105,8 @@ def generate_html_email_report(jobs_list):
     
     try:
         genai.configure(api_key=api_key)
-        model = genai.GenerativeModel(model_name="gemini-2.5-flash")
+        # 💡 關鍵修正：同步升級為 "gemini-2.5-pro"
+        model = genai.GenerativeModel(model_name="gemini-2.5-pro")
         
         current_date = datetime.now().strftime("%Y-%m-%d")
         jobs_json_str = json.dumps(jobs_list, ensure_ascii=False)
@@ -145,9 +147,8 @@ if st.button("🚀 立即更新本週職缺 (商務表格測試)", type="primary
     data = fetch_and_analyze()
     
     if data:
-        st.success(f"🎉 測試成功！已成功撈回第一頁共 {len(data)} 筆精簡職缺進行表格測試！")
+        st.success(f"🎉 測試成功！已成功撈回第一頁共 {len(data)} 筆精簡職缺進行 Pro 表格測試！")
         
-        # 用來 Double Check 的折疊清單
         with st.expander("🔍 點此展開「職缺原始清單」以進行資料 Double Check"):
             for index, job in enumerate(data):
                 with st.container():
@@ -159,11 +160,10 @@ if st.button("🚀 立即更新本週職缺 (商務表格測試)", type="primary
                         st.markdown(f"💰 薪資: {job.get('salary', '未知')} | [🔗 詳細內容頁面]({job.get('link')})")
                     st.divider()
         
-        st.subheader("📋 本週職缺 Email 商務表格報告 (預覽測試)")
+        st.subheader("📋 本週職缺 Email 商務表格報告 (Pro 預覽測試)")
         
         html_email_content = generate_html_email_report(data)
         
-        # 純 HTML + JavaScript 複製按鈕
         copy_script_and_button = f"""
         <div style="margin-bottom: 15px;">
             <button id="copy-btn" onclick="copyHtmlReport()" style="
@@ -207,7 +207,6 @@ if st.button("🚀 立即更新本週職缺 (商務表格測試)", type="primary
         
         st.markdown(copy_script_and_button, unsafe_allow_html=True)
         
-        # 白色報告顯示區
         st.markdown(
             f'<div id="email-content-box" style="border:1px solid #ddd; padding:20px; border-radius:5px; background-color: #ffffff; color: #000000;">'
             f'{html_email_content}'
