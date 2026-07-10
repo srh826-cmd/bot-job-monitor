@@ -26,7 +26,6 @@ def fetch_and_analyze():
     
     with st.spinner("🔄 正在巡邏擷取「本週第一頁」精簡資訊進行測試..."):
         try:
-            # 💡 測試模式：只抓本週的第一頁網址
             url = "https://www.ncafroc.org.tw/recruitment?page=0&organizationId=&salaryType=&salaryRange=&organizationName=&publishTime=WEEK".strip()
             
             headers = {
@@ -114,21 +113,23 @@ def generate_html_email_report(jobs_list):
         請根據以下提供的國藝會職缺 JSON 資料，撰寫一份專業、格式工整、適合直接複製貼進 Gmail/Outlook 的 Email 職缺追蹤報告。
         
         【Email 排版要求】
-        1. 開頭請嚴格寫（換行請符合以下格式）：
+        1. 開頭請嚴格依循此格式（換行請符合以下要求）：
            Dear all ,
            
            以下為 {current_date} 於官網新增之藝文求才與展演櫥窗：
            
            | 藝文求才 |
-        2. 職缺清單必須繪製成一個標準的 HTML <table> 表格。表格要有邊框、間距與專業外觀。
-        3. 表格欄位與樣式規範（必須嚴格遵守，以符合主管要求的專業格式）：
+           
+        2. 【極重要字體大小規範】：請確保「| 藝文求才 |」這行字使用一般段落（或使用與內文完全相同的字體大小和粗細，例如標準的 <p> 標籤），絕對不要使用 <h1> 到 <h6> 等會放大字體的網頁標題標籤。
+        3. 職缺清單必須繪製成一個標準的 HTML <table> 表格。表格要有邊框、間距與專業外觀。
+        4. 表格欄位與樣式規範：
            - 欄位共有三欄：求才單位、職缺名稱、薪資待遇。
            - 標題列（Th）的背景顏色必須是淺灰色（#CCCCCC 或 #D3D3D3），字體加粗，線條要有邊框。
            - 邊框線條必須是細實線（border: 1px solid #000000; border-collapse: collapse;）。
            - 如果同一個「求才單位」有多個職缺，請使用 HTML 的 `rowspan` 屬性將「求才單位」的儲存格合併。
            - 「職缺名稱」必須是帶有超連結的藍色文字，點擊可直接連結到該職缺的 URL。
-        4. 結尾留空簽名檔。
-        5. 【極重要】請直接輸出純 HTML 原始碼（包含問候語與表格），絕對不要包含任何 Markdown 標籤（如 ```html 或 ```），也不要包含 🌟 或 ** 等符號。
+        5. 結尾留空簽名檔。
+        6. 請直接輸出純 HTML 原始碼，絕對不要包含任何 Markdown 標籤（如 ```html），也不要包含 🌟 或 ** 等符號。
         
         【職缺 JSON 資料】
         {jobs_json_str}
@@ -146,7 +147,7 @@ if st.button("🚀 立即更新本週職缺 (商務表格測試完全體)", type
     if data:
         st.success(f"🎉 測試成功！已成功撈回第一頁共 {len(data)} 筆精簡職缺進行表格測試！")
         
-        # 💡 把用來 Double Check 的藍色卡片清單塞進折疊區，平常不佔畫面空間
+        # 用來 Double Check 的折疊清單
         with st.expander("🔍 點此展開「職缺原始清單」以進行資料 Double Check"):
             for index, job in enumerate(data):
                 with st.container():
@@ -159,14 +160,56 @@ if st.button("🚀 立即更新本週職缺 (商務表格測試完全體)", type
                     st.divider()
         
         st.subheader("📋 本週職缺 Email 商務表格報告 (預覽測試)")
-        st.info("💡 懶人測試：滑鼠直接在下方綠色框框內「隨便點一下左鍵」，信件文字與表格就會自動全部反白！接著按 Ctrl+C 即可複製！")
         
         html_email_content = generate_html_email_report(data)
         
-        # 🌟 內嵌點擊全選 JavaScript 的魔術綠色框框
+        # 純 HTML + JavaScript 複製按鈕
+        copy_script_and_button = f"""
+        <div style="margin-bottom: 15px;">
+            <button id="copy-btn" onclick="copyHtmlReport()" style="
+                background-color: #4CAF50; 
+                color: white; 
+                padding: 10px 20px; 
+                border: none; 
+                border-radius: 4px; 
+                cursor: pointer; 
+                font-size: 16px; 
+                font-weight: bold;
+                box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            ">📋 點此按鈕：一鍵複製 Email 表格報告</button>
+            <span id="copy-status" style="margin-left: 15px; color: #4CAF50; font-weight: bold;"></span>
+        </div>
+
+        <script>
+        function copyHtmlReport() {{
+            var container = document.getElementById('email-content-box');
+            var range = document.createRange();
+            range.selectNode(container);
+            window.getSelection().removeAllRanges();
+            window.getSelection().addRange(range);
+            
+            try {{
+                var successful = document.execCommand('copy');
+                var statusSpan = document.getElementById('copy-status');
+                if(successful) {{
+                    statusSpan.innerText = "✨ 複製成功！請直接去信箱貼上！";
+                    setTimeout(function() {{ statusSpan.innerText = ""; }}, 3000);
+                }} else {{
+                    statusSpan.innerText = "❌ 複製失敗，請用滑鼠手動反白。";
+                }}
+            }} catch (err) {{
+                document.getElementById('copy-status').innerText = "❌ 瀏覽器不支援此一鍵複製。";
+            }}
+            window.getSelection().removeAllRanges();
+        }}
+        </script>
+        """
+        
+        st.markdown(copy_script_and_button, unsafe_allow_html=True)
+        
+        # 白色報告顯示區
         st.markdown(
-            f'<div id="email-box" onclick="window.getSelection().selectAllChildren(this);" '
-            f'style="border:2px solid #4CAF50; padding:20px; border-radius:5px; background-color: #ffffff; color: #000000; cursor: pointer;">'
+            f'<div id="email-content-box" style="border:1px solid #ddd; padding:20px; border-radius:5px; background-color: #ffffff; color: #000000;">'
             f'{html_email_content}'
             f'</div>', 
             unsafe_allow_html=True
