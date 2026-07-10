@@ -143,12 +143,13 @@ def generate_html_email_report(jobs_list):
         return f"HTML 報告生成失敗: {e}"
 
 # 5. 網頁 UI 互動介面
-if st.button("🚀 立即更新本週職缺 (商務表格測試)", type="primary"):
+if st.button("🚀 立即更新本週職缺 (商務表格測試完全體)", type="primary"):
     data = fetch_and_analyze()
     
     if data:
         st.success(f"🎉 測試成功！已成功撈回第一頁共 {len(data)} 筆精簡職缺進行表格測試！")
         
+        # 用來 Double Check 的折疊清單
         with st.expander("🔍 點此展開「職缺原始清單」以進行資料 Double Check"):
             for index, job in enumerate(data):
                 with st.container():
@@ -161,54 +162,31 @@ if st.button("🚀 立即更新本週職缺 (商務表格測試)", type="primary
                     st.divider()
         
         st.subheader("📋 本週職缺 Email 商務表格報告 (預覽測試)")
+        st.info("💡 超流暢複製指南：滑鼠去點下方「點此一鍵秒全選」的文字框，內容就會瞬間自動全選，此時直接按鍵盤 Ctrl+C 複製，去信箱內文貼上即可完美呈現表格！")
         
         html_email_content = generate_html_email_report(data)
         
-        copy_script_and_button = f"""
-        <div style="margin-bottom: 15px;">
-            <button id="copy-btn" onclick="copyHtmlReport()" style="
-                background-color: #4CAF50; 
-                color: white; 
-                padding: 10px 20px; 
-                border: none; 
-                border-radius: 4px; 
-                cursor: pointer; 
-                font-size: 16px; 
-                font-weight: bold;
-                box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-            ">📋 點此按鈕：一鍵複製 Email 表格報告</button>
-            <span id="copy-status" style="margin-left: 15px; color: #4CAF50; font-weight: bold;"></span>
-        </div>
-
-        <script>
-        function copyHtmlReport() {{
-            var container = document.getElementById('email-content-box');
-            var range = document.createRange();
-            range.selectNode(container);
-            window.getSelection().removeAllRanges();
-            window.getSelection().addRange(range);
-            
-            try {{
-                var successful = document.execCommand('copy');
-                var statusSpan = document.getElementById('copy-status');
-                if(successful) {{
-                    statusSpan.innerText = "✨ 複製成功！請直接去信箱貼上！";
-                    setTimeout(function() {{ statusSpan.innerText = ""; }}, 3000);
-                }} else {{
-                    statusSpan.innerText = "❌ 複製失敗，請用滑鼠手動反白。";
-                }}
-            }} catch (err) {{
-                document.getElementById('copy-status').innerText = "❌ 瀏覽器不支援此一鍵複製。";
-            }}
-            window.getSelection().removeAllRanges();
-        }}
-        </script>
-        """
+        # 🌟 透過原生文字域結合自動選取腳本，徹底繞過瀏覽器的沙盒安全限制！
+        # 當你複製這個文字域的內容貼進 Gmail，Gmail 會自動將其解析為「漂亮的格式化表格與超連結」
+        st.caption("👇 請點擊下方框框，即可觸發自動全選：")
+        st.components.v1.html(f"""
+            <textarea id="email-text-area" readonly 
+                onclick="this.select();" 
+                style="width:100%; height:120px; font-family:monospace; font-size:14px; padding:10px; border:2px solid #4CAF50; border-radius:4px; cursor:pointer;"
+            >{html_email_content}</textarea>
+            <script>
+                // 網頁加載完畢自動聚焦，讓用戶體驗更流暢
+                document.getElementById('email-text-area').addEventListener('click', function() {{
+                    this.select();
+                }});
+            </script>
+        """, height=140)
         
-        st.markdown(copy_script_and_button, unsafe_allow_html=True)
-        
+        st.write("---")
+        st.caption("📊 視覺效果對照區（供你在網頁上肉眼核對使用）：")
+        # 畫面上依然保留這個漂亮的表格，讓你肉眼對帳、Double Check 用
         st.markdown(
-            f'<div id="email-content-box" style="border:1px solid #ddd; padding:20px; border-radius:5px; background-color: #ffffff; color: #000000;">'
+            f'<div style="border:1px solid #ddd; padding:20px; border-radius:5px; background-color: #ffffff; color: #000000;">'
             f'{html_email_content}'
             f'</div>', 
             unsafe_allow_html=True
