@@ -3,19 +3,20 @@ import requests
 from bs4 import BeautifulSoup
 import google.generativeai as genai
 import json
+from datetime import datetime
 
 # 1. 網頁基本設定
-st.set_page_config(page_title="國藝會職缺自動化追蹤器", page_icon="🎨", layout="centered")
-st.title("🎨 國藝會職缺自動化追蹤器")
-st.caption("使用 Streamlit + Google AI Studio (Gemini 2.5 Flash) 本週單頁報告測試版")
+st.set_page_config(page_title="國藝會求才自動化追蹤器", page_icon="🎨", layout="centered")
+st.title("🎨 國藝會求才自動化追蹤器")
+st.caption("使用 Streamlit + Google AI Studio (Gemini 2.5 Flash) 本週求才商務表格測試版")
 
-# 2. 安全取得 Gemini API Key (相容本地與雲端)
+# 2. 安全取得 Gemini API Key
 if "GEMINI_API_KEY" in st.secrets:
     api_key = st.secrets["GEMINI_API_KEY"]
 else:
     api_key = st.sidebar.text_input("請輸入 Gemini API Key", type="password")
 
-# 3. 核心抓取與分析功能
+# 3. 核心抓取與分析功能 (本週第一頁精簡測試版)
 def fetch_and_analyze():
     if not api_key:
         st.warning("⚠️ 請先在 Streamlit Secrets 設定或在左側輸入 Gemini API Key！")
@@ -25,7 +26,7 @@ def fetch_and_analyze():
     
     with st.spinner("🔄 正在巡邏擷取「本週第一頁」精簡資訊進行測試..."):
         try:
-            # 💡 測試模式：只抓本週的第一頁網址，並強制加上 .strip() 防禦
+            # 💡 測試模式：只抓本週的第一頁網址
             url = "https://www.ncafroc.org.tw/recruitment?page=0&organizationId=&salaryType=&salaryRange=&organizationName=&publishTime=WEEK".strip()
             
             headers = {
@@ -54,7 +55,7 @@ def fetch_and_analyze():
                     html_snapshot += f"【名稱/內容】: {text} -> 【詳細內頁網址】: {full_url}\n"
             
             if has_links:
-                html_snapshot += "\n--- 本週篩選第一頁純文字內容 ---\n"
+                html_snapshot += "\n--- 本週篩選第一頁純文字內容（含薪資資訊） ---\n"
                 html_snapshot += soup.get_text(separator="\n", strip=True)
                 
         except Exception as e:
@@ -64,7 +65,7 @@ def fetch_and_analyze():
     if not html_snapshot.strip():
         return []
 
-    with st.spinner("🧠 Gemini API 正在以最省配額模式分析第一頁職缺..."):
+    with st.spinner("🧠 Gemini API 正在以最省配額模式分析本週職缺與薪資..."):
         try:
             genai.configure(api_key=api_key)
             
@@ -79,11 +80,12 @@ def fetch_and_analyze():
             
             【嚴格規範】
             1. 必須輸出符合 JSON Array 的格式，不要包含 ```json 等 Markdown 標籤。
-            2. 每個物件必須包含四個欄位：
+            2. 每個物件必須包含五個欄位：
                - "date": 職缺公告或更新日期 (請根據網頁實際文字填寫，格式如: 2026-07-10)
                - "organization": 求才單位名稱
                - "title": 職缺職稱
                - "link": 請精準填寫該職缺對應的詳細內頁網址。
+               - "salary": 請從純文字中找出該職缺對應的薪資待遇 (例如: 月薪 45,000元 ~、時薪 200元、面議...等，若找不到填寫「依網站公告」)
             
             【本週網頁資料（單頁精簡）】
             {html_snapshot}
@@ -96,49 +98,53 @@ def fetch_and_analyze():
             st.error(f"Gemini 分析失敗: {e}")
             return None
 
-# 4. Email 報告文字生成功能
-def generate_email_report(jobs_list):
+# 4. HTML Email 表格報告文字生成功能
+def generate_html_email_report(jobs_list):
     if not jobs_list:
-        return "本週國藝會無更新職缺，無需發送報告。"
+        return "<p>本週國藝會無更新職缺，無需發送報告。</p>"
     
     try:
         genai.configure(api_key=api_key)
         model = genai.GenerativeModel(model_name="gemini-2.5-flash")
         
-        # 💡 優化點一：直接在底層資料串接處，換成你指定的實心圓點「・」，並強迫分行！
-        jobs_summary = ""
-        for index, job in enumerate(jobs_list, 1):
-            jobs_summary += f"{index}. {job.get('organization')} - {job.get('title')}\n"
-            jobs_summary += f"・日期: {job.get('date')}\n"
-            jobs_summary += f"・單位: {job.get('organization')}\n"
-            jobs_summary += f"・職稱: {job.get('title')}\n"
-            jobs_summary += f"・連結: {job.get('link')}\n\n"
+        current_date = datetime.now().strftime("%Y-%m-%d")
+        jobs_json_str = json.dumps(jobs_list, ensure_ascii=False)
         
         email_prompt = f"""
-        請根據以下提供的國藝會職缺清單，撰寫一份專業、格式工整、適合直接複製寄出給主管或團隊的 Email 職缺追蹤報告。
+        請根據以下提供的國藝會職缺 JSON 資料，撰寫一份專業、格式工整、適合直接複製貼進 Gmail/Outlook 的 Email 職缺追蹤報告。
         
-        【Email 要求】
-        1. 必須包含清晰的「主旨（Subject）」範例（需提及國藝會最新職缺追蹤匯報，並帶有今日日期 2026-07-10）。
-        2. 內文開頭需有得體的商務問候語。
-        3. 職缺資訊請「嚴格完整保留」我提供給你的「・」實心圓點排版格式，不要自行刪除圓點，也不要加上任何 Markdown 的 ** 粗體星號標籤。
-        4. 結尾需有專業的簽名檔格式留空。
-        5. 不要包含任何網頁代碼或額外的 Markdown 解釋，輸出必須是純文字的 Email 範本。
+        【Email 排版要求】
+        1. 開頭請嚴格寫（換行請符合以下格式）：
+           Dear all ,
+           
+           以下為 {current_date} 於官網新增之藝文求才與展演櫥窗：
+           
+           | 藝文求才 |
+        2. 職缺清單必須繪製成一個標準的 HTML <table> 表格。表格要有邊框、間距與專業外觀。
+        3. 表格欄位與樣式規範（必須嚴格遵守，以符合主管要求的專業格式）：
+           - 欄位共有三欄：求才單位、職缺名稱、薪資待遇。
+           - 標題列（Th）的背景顏色必須是淺灰色（#CCCCCC 或 #D3D3D3），字體加粗，線條要有邊框。
+           - 邊框線條必須是細實線（border: 1px solid #000000; border-collapse: collapse;）。
+           - 如果同一個「求才單位」有多個職缺（例如同一個單位有兩個職稱），請聰明地使用 HTML 的 `rowspan` 屬性將「求才單位」的儲存格合併，讓視覺更整齊。
+           - 「職缺名稱」必須是帶有超連結的藍色文字，點擊可直接連結到該職缺的 URL。
+        4. 結尾留空簽名檔。
+        5. 【極重要】請直接輸出純 HTML 原始碼（包含問候語與表格），絕對不要包含任何 Markdown 標籤（如 ```html 或 ```），也不要包含 🌟 或 ** 等符號。
         
-        【職缺資料】
-        {jobs_summary}
+        【職缺 JSON 資料】
+        {jobs_json_str}
         """
         
         response = model.generate_content(email_prompt)
         return response.text.strip()
     except Exception as e:
-        return f"Email 報告生成失敗: {e}"
+        return f"HTML 報告生成失敗: {e}"
 
 # 5. 網頁 UI 互動介面
-if st.button("🚀 立即更新本週職缺 (精簡單頁+報告測試)", type="primary"):
+if st.button("🚀 立即更新本週職缺 (商務表格測試版)", type="primary"):
     data = fetch_and_analyze()
     
     if data:
-        st.success(f"🎉 測試成功！已成功撈回第一頁共 {len(data)} 筆精簡職缺！")
+        st.success(f"🎉 測試成功！已成功撈回第一頁共 {len(data)} 筆精簡職缺進行表格測試！")
         
         # 顯示網頁卡片 UI
         for index, job in enumerate(data):
@@ -148,22 +154,21 @@ if st.button("🚀 立即更新本週職缺 (精簡單頁+報告測試)", type="
                     st.info(f"📅 {job.get('date', '未知')}")
                 with col2:
                     st.subheader(f"{job.get('organization', '未知')} - {job.get('title', '未知')}")
-                    st.markdown(f"[🔗 點此直接進入該職缺詳細內容頁面]({job.get('link')})")
+                    st.markdown(f"💰 薪資: {job.get('salary', '未知')} | [🔗 詳細內容頁面]({job.get('link')})")
                 st.divider()
         
-        st.subheader("📋 職缺 Email 報告範本 (測試)")
+        st.subheader("📋 本週職缺 Email 商務表格報告 (預覽測試)")
+        st.info("💡 提示：請直接用滑鼠從「Dear all」一路往下拖曳反白至表格結束，按 Ctrl+C 複製，貼進信箱即可完美保留所有格線與超連結！")
         
-        email_content = generate_email_report(data)
+        html_email_content = generate_email_report(data)
         
-        # 💡 優化點二：極致的防禦性除錯，把可能漏出來的所有粗體和斜體星號全部瞬間擦乾淨
-        clean_email_content = email_content.replace("**", "").replace("*", "").replace("`", "")
-        
-        # 🌟 1. 點擊連結預覽區
-        with st.expander("👀 點此展開「可直接點擊連結」的報告預覽並檢查"):
-            st.markdown(email_content)
-            
-        # 🌟 2. 乾淨純文字複製區（帶有完美的實心圓點排版！）
-        st.text_area("📄 乾淨文字複製區 (已自動去除星號 / 點擊框內按 Ctrl+A 即可全選複製)", value=clean_email_content, height=450)
+        # 🌟 透過內嵌 HTML 把商務表格在網頁畫面上亮麗呈現，方便你直接拖曳複製
+        st.markdown(
+            f'<div style="border:1px solid #ddd; padding:20px; border-radius:5px; background-color: #ffffff; color: #000000;">'
+            f'{html_email_content}'
+            f'</div>', 
+            unsafe_allow_html=True
+        )
         
     else:
         st.info("目前沒有抓到職缺，請確認網頁內容。")
