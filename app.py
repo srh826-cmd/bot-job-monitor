@@ -7,7 +7,7 @@ import json
 # 1. 網頁基本設定
 st.set_page_config(page_title="國藝會求才自動化追蹤器", page_icon="🎨", layout="centered")
 st.title("🎨 國藝會求才自動化追蹤器")
-st.caption("使用 Streamlit + Google AI Studio (Gemini 2.5 Flash) 本週單頁雙贏報告測試版")
+st.caption("使用 Streamlit + Google AI Studio (Gemini 2.5 Flash) 本週單頁報告測試版")
 
 # 2. 安全取得 Gemini API Key (相容本地與雲端)
 if "GEMINI_API_KEY" in st.secrets:
@@ -154,15 +154,11 @@ if st.button("🚀 立即更新本週職缺 (精簡單頁+雙贏報告測試)", 
         # 💡 核心魔法：利用 Python 的 .replace() 把複製區與文字框裡的星號（*）全部擦掉！
         clean_email_content = email_content.replace("**", "").replace("*", "")
         
-        # 🌟 1. 一鍵複製大按鈕（餵給它完全沒有星號的乾淨純文字！）
-        st.clipboard(clean_email_content, label="📋 點此按鈕：一鍵複製乾淨純文字 Email 報告")
-        
-        # 🌟 2. 點擊連結預覽區（維持原本的 email_content，這樣它才能在網頁上漂亮地渲染出藍色超連結）
-        with st.expander("👀 點此展開「可直接點擊連結」的報告預覽"):
+       # 🌟 1. 點擊連結預覽區（維持原本的 email_content，這樣它才能在網頁上漂亮地渲染出藍色超連結）
+        with st.expander("👀 點此展開「可直接點擊連結」的報告預覽並檢查"):
             st.markdown(email_content)
             
-        # 🌟 3. 純文字備份框（也是餵給它完全去背的乾淨文字）
-        st.text_area("📄 報告純文字備份框 (完全去除星號)", value=clean_email_content, height=350)
-        
+        # 🌟 2. 乾淨純文字複製區（餵給它完全去除星號的文字，點框框按 Ctrl+A 即可極速複製）
+        st.text_area("📄 乾淨文字複製區 (已自動去除星號 / 點擊框內按 Ctrl+A 即可全選複製)", value=clean_email_content, height=400)
     else:
         st.info("目前沒有抓到職缺，請確認網頁內容。")
