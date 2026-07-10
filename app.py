@@ -7,7 +7,7 @@ import json
 # 1. 網頁基本設定
 st.set_page_config(page_title="國藝會求才自動化追蹤器", page_icon="🎨", layout="centered")
 st.title("🎨 國藝會求才自動化追蹤器")
-st.caption("使用 Streamlit + Google AI Studio (Gemini 2.5 Flash) 本週單頁報告測試版")
+st.caption("使用 Streamlit + Google AI Studio (Gemini 2.5 Flash) 本週單頁雙贏報告測試版")
 
 # 2. 安全取得 Gemini API Key (相容本地與雲端)
 if "GEMINI_API_KEY" in st.secrets:
@@ -105,9 +105,14 @@ def generate_email_report(jobs_list):
         genai.configure(api_key=api_key)
         model = genai.GenerativeModel(model_name="gemini-2.5-flash")
         
+        # 💡 優化點一：直接在底層資料串接處，換成你指定的實心圓點「・」，並強迫分行！
         jobs_summary = ""
-        for job in jobs_list:
-            jobs_summary += f"- 日期: {job.get('date')} | 單位: {job.get('organization')} | 職稱: {job.get('title')}\n  詳細網址: {job.get('link')}\n\n"
+        for index, job in enumerate(jobs_list, 1):
+            jobs_summary += f"{index}. {job.get('organization')} - {job.get('title')}\n"
+            jobs_summary += f"・日期: {job.get('date')}\n"
+            jobs_summary += f"・單位: {job.get('organization')}\n"
+            jobs_summary += f"・職稱: {job.get('title')}\n"
+            jobs_summary += f"・連結: {job.get('link')}\n\n"
         
         email_prompt = f"""
         請根據以下提供的國藝會職缺清單，撰寫一份專業、格式工整、適合直接複製寄出給主管或團隊的 Email 職缺追蹤報告。
@@ -115,7 +120,7 @@ def generate_email_report(jobs_list):
         【Email 要求】
         1. 必須包含清晰的「主旨（Subject）」範例（需提及國藝會最新職缺追蹤匯報，並帶有今日日期 2026-07-10）。
         2. 內文開頭需有得體的商務問候語。
-        3. 請將職缺資訊用工整的條列式、或純文字表格排版，方便閱讀。每一筆職缺都必須附上其對應的詳細內容網址連結。
+        3. 職缺資訊請「嚴格完整保留」我提供給你的「・」實心圓點排版格式，不要自行刪除圓點，也不要加上任何 Markdown 的 ** 粗體星號標籤。
         4. 結尾需有專業的簽名檔格式留空。
         5. 不要包含任何網頁代碼或額外的 Markdown 解釋，輸出必須是純文字的 Email 範本。
         
@@ -146,19 +151,19 @@ if st.button("🚀 立即更新本週職缺 (精簡單頁+雙贏報告測試)", 
                     st.markdown(f"[🔗 點此直接進入該職缺詳細內容頁面]({job.get('link')})")
                 st.divider()
         
-        # 💡 雙贏 UI 呈現區塊
         st.subheader("📋 職缺 Email 報告範本 (測試)")
         
         email_content = generate_email_report(data)
         
-        # 💡 核心魔法：利用 Python 的 .replace() 把複製區與文字框裡的星號（*）全部擦掉！
-        clean_email_content = email_content.replace("**", "").replace("*", "")
+        # 💡 優化點二：極致的防禦性除錯，把可能漏出來的所有粗體和斜體星號全部瞬間擦乾淨
+        clean_email_content = email_content.replace("**", "").replace("*", "").replace("`", "")
         
-       # 🌟 1. 點擊連結預覽區（維持原本的 email_content，這樣它才能在網頁上漂亮地渲染出藍色超連結）
+        # 🌟 1. 點擊連結預覽區
         with st.expander("👀 點此展開「可直接點擊連結」的報告預覽並檢查"):
             st.markdown(email_content)
             
-        # 🌟 2. 乾淨純文字複製區（餵給它完全去除星號的文字，點框框按 Ctrl+A 即可極速複製）
-        st.text_area("📄 乾淨文字複製區 (已自動去除星號 / 點擊框內按 Ctrl+A 即可全選複製)", value=clean_email_content, height=400)
+        # 🌟 2. 乾淨純文字複製區（帶有完美的實心圓點排版！）
+        st.text_area("📄 乾淨文字複製區 (已自動去除星號 / 點擊框內按 Ctrl+A 即可全選複製)", value=clean_email_content, height=450)
+        
     else:
         st.info("目前沒有抓到職缺，請確認網頁內容。")
