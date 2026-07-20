@@ -16,7 +16,7 @@ if "GEMINI_API_KEY" in st.secrets:
 else:
     api_key = st.sidebar.text_input("請輸入 Gemini API Key", type="password")
 
-# 3. 核心抓取與分析功能 (正式上線：今日 TODAY + 雙頁跨頁防漏)
+# 3. 核心抓取與分析功能 (正式上線：今日 TODAY + 三頁跨頁防漏)
 def fetch_and_analyze():
     if not api_key:
         st.warning("⚠️ 請先在 Streamlit Secrets 設定或在左側輸入 Gemini API Key！")
@@ -26,8 +26,8 @@ def fetch_and_analyze():
     
     with st.spinner("🔄 正在巡邏擷取今日求才資訊（自動檢查多個分頁防漏）..."):
         try:
-            # 💡 正式版：自動巡邏今日（TODAY）的前兩頁資料，確保不漏掉任何最新職缺
-            for page_num in range(0, 2):
+            # 💡 正式版：自動巡邏今日（TODAY）的前三頁資料，確保不漏掉任何最新職缺
+            for page_num in range(0, 3):
                 url = f"https://www.ncafroc.org.tw/recruitment?page={page_num}&organizationId=&salaryType=&salaryRange=&organizationName=&publishTime=TODAY".strip()
                 
                 headers = {
