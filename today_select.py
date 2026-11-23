@@ -1,83 +1,134 @@
-import streamlit as st
-import requests
-from bs4 import BeautifulSoup
-import google.generativeai as genai
 import json
 from datetime import datetime
+import time
+import google.generativeai as genai
+import requests
+import streamlit as st
+from bs4 import BeautifulSoup
 
 # 1. 網頁基本設定
-st.set_page_config(page_title="國藝會職缺自動化追蹤器", page_icon="🎨", layout="centered")
+st.set_page_config(
+    page_title="國藝會職缺自動化追蹤器", page_icon="🎨", layout="centered"
+)
 st.title("🎨 國藝會職缺自動化追蹤器")
-st.caption("使用 Streamlit + Google AI Studio (Gemini 3.1 Flash-Lite 核心) 今日職缺商務表格正式版")
+st.caption(
+    "使用 Streamlit + Google AI Studio (Gemini 3.1 Flash-Lite 核心)"
+    " 今日職缺商務表格正式版"
+)
 
 # 2. 安全取得 Gemini API Key
 if "GEMINI_API_KEY" in st.secrets:
-    api_key = st.secrets["GEMINI_API_KEY"]
+  api_key = st.secrets["GEMINI_API_KEY"]
 else:
-    api_key = st.sidebar.text_input("請輸入 Gemini API Key", type="password")
+  api_key = st.sidebar.text_input("請輸入 Gemini API Key", type="password")
 
-# 3. 核心抓取與分析功能 (正式上線：今日 TODAY + 三頁跨頁防漏)
+
+# 3. 核心抓取與分析功能 (正式上線：今日 TODAY + 自動偵測全分頁防漏)
 def fetch_and_analyze():
-    if not api_key:
-        st.warning("⚠️ 請先在 Streamlit Secrets 設定或在左側輸入 Gemini API Key！")
-        return None
-    
-    html_snapshot = ""
-    
-    with st.spinner("🔄 正在巡邏擷取今日求才資訊（自動檢查多個分頁防漏）..."):
-        try:
-            # 💡 正式版：自動巡邏今日（TODAY）的前三頁資料，確保不漏掉任何最新職缺
-            for page_num in range(0, 3):
-                url = f"https://www.ncafroc.org.tw/recruitment?page={page_num}&organizationId=&salaryType=&salaryRange=&organizationName=&publishTime=TODAY".strip()
-                
-                headers = {
-                    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-                }
-                
-                response = requests.get(url, headers=headers, timeout=10)
-                response.encoding = 'utf-8'
-                soup = BeautifulSoup(response.text, 'html.parser')
-                
-                has_links = False
-                
-                for a_tag in soup.find_all('a', href=True):
-                    text = a_tag.get_text(strip=True)
-                    href = a_tag['href']
-                    
-                    if text and ("recruitment" in href or "sid=" in href or "html" in href):
-                        has_links = True
-                        if href.startswith("/"):
-                            full_url = f"https://www.ncafroc.org.tw{href}"
-                        elif href.startswith("http"):
-                            full_url = href
-                        else:
-                            full_url = f"https://www.ncafroc.org.tw/{href}"
-                            
-                        html_snapshot += f"【名稱/內容】: {text} -> 【詳細內頁網址】: {full_url}\n"
-                
-                if has_links:
-                    html_snapshot += f"\n--- 今日篩選第 {page_num + 1} 頁純文字內容（含薪資資訊） ---\n"
-                    html_snapshot += soup.get_text(separator="\n", strip=True)
-                
-        except Exception as e:
-            st.error(f"網頁抓取失敗: {e}")
-            return None
+  if not api_key:
+    st.warning(
+        "⚠️ 請先在 Streamlit Secrets 設定或在左側輸入 Gemini API Key！"
+    )
+    return None
 
-    if not html_snapshot.strip():
-        return []
+  html_snapshot = ""
+  seen_urls = set()  # 記錄抓過的網址，確保跨頁不重複
 
-    with st.spinner("🧠 Gemini 3.1 Flash-Lite 核心正在過濾並分析今日最新職缺與薪資..."):
-        try:
-            genai.configure(api_key=api_key)
-            
-            # 💡 大腦鎖定為官方正式支援 3.1 核心之 ID: "gemini-3.1-flash-lite"
-            model = genai.GenerativeModel(
-                model_name="gemini-3.1-flash-lite",
-                generation_config={"response_mime_type": "application/json"}
-            )
-            
-            prompt = f"""
-            你是一個專業的網頁資料分析專家。以下是國藝會「今天最新公告」的求才對照文字（已自動合併多個分頁）。
+  with st.spinner(
+      "🔄 正在巡邏擷取今日求才資訊（自動偵測並檢查所有分頁防漏）..."
+  ):
+    try:
+      page_num = 0
+      total_pages = 1  # 抓完第 1 頁後會自動更新為網站實際總頁數
+      max_safety_pages = 20  # 安全上限，防止無窮迴圈
+
+      headers = {
+          "User-Agent": (
+              "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"
+              " AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0"
+              " Safari/537.36"
+          )
+      }
+
+      while page_num < total_pages and page_num < max_safety_pages:
+        # 💡 加上 pageForm.equal=publishTime 才能正常讀取第 2 頁之後的資料
+        url = (
+            "https://www.ncafroc.org.tw/recruitment?"
+            f"page={page_num}&organizationId=&salaryType=&salaryRange=&organizationName=&publishTime=TODAY&pageForm.equal=publishTime"
+        ).strip()
+
+        response = requests.get(url, headers=headers, timeout=10)
+        response.encoding = "utf-8"
+        soup = BeautifulSoup(response.text, "html.parser")
+
+        # 💡 在第一頁時，自動讀取網頁實際的總頁數 (totalPage)
+        if page_num == 0:
+          total_page_input = soup.find("input", {"id": "totalPage"})
+          if total_page_input and total_page_input.get("value"):
+            try:
+              detected_pages = int(total_page_input["value"])
+              if detected_pages > 0:
+                total_pages = detected_pages
+            except ValueError:
+              pass
+
+        has_new_links = False
+
+        for a_tag in soup.find_all("a", href=True):
+          text = a_tag.get_text(strip=True)
+          href = a_tag["href"]
+
+          if text and (
+              "recruitment" in href or "sid=" in href or "html" in href
+          ):
+            if href.startswith("/"):
+              full_url = f"https://www.ncafroc.org.tw{href}"
+            elif href.startswith("http"):
+              full_url = href
+            else:
+              full_url = f"https://www.ncafroc.org.tw/{href}"
+
+            # 確認這個網址沒抓過才加入
+            if full_url not in seen_urls:
+              seen_urls.add(full_url)
+              has_new_links = True
+              html_snapshot += (
+                  f"【名稱/內容】: {text} -> 【詳細內頁網址】: {full_url}\n"
+              )
+
+        if has_new_links:
+          html_snapshot += (
+              f"\n--- 今日篩選第 {page_num + 1} 頁純文字內容（含薪資資訊） ---\n"
+          )
+          html_snapshot += soup.get_text(separator="\n", strip=True)
+        else:
+          # 如果這一頁沒有新職缺，代表已經抓到底了，提早結束
+          break
+
+        page_num += 1
+        time.sleep(0.5)
+
+    except Exception as e:
+      st.error(f"網頁抓取失敗: {e}")
+      return None
+
+  if not html_snapshot.strip():
+    return []
+
+  with st.spinner(
+      "🧠 Gemini 3.1 Flash-Lite 核心正在過濾並分析今日最新職缺與薪資..."
+  ):
+    try:
+      genai.configure(api_key=api_key)
+
+      # 💡 大腦鎖定為官方正式支援 3.1 核心之 ID: "gemini-3.1-flash-lite"
+      model = genai.GenerativeModel(
+          model_name="gemini-3.1-flash-lite",
+          generation_config={"response_mime_type": "application/json"},
+      )
+
+      prompt = f"""
+            你是一個專業的網頁資料分析專家。以下是國藝會「今天最新公告」的求才對照文字（已自動合併所有分頁）。
             請幫我整理出「今天（最新）」公告的所有職缺清單（請嚴格忽略重複的職缺）。
             
             【嚴格規範】
@@ -92,28 +143,29 @@ def fetch_and_analyze():
             【當日最新網頁資料】
             {html_snapshot}
             """
-            
-            response = model.generate_content(prompt)
-            jobs_data = json.loads(response.text.strip())
-            return jobs_data
-        except Exception as e:
-            st.error(f"Gemini 分析失敗: {e}")
-            return None
+
+      response = model.generate_content(prompt)
+      jobs_data = json.loads(response.text.strip())
+      return jobs_data
+    except Exception as e:
+      st.error(f"Gemini 分析失敗: {e}")
+      return None
+
 
 # 4. HTML Email 表格報告文字生成功能
 def generate_html_email_report(jobs_list):
-    if not jobs_list:
-        return "<p>今日國藝會無更新職缺，無需發送報告。</p>"
-    
-    try:
-        genai.configure(api_key=api_key)
-        # 💡 同步將模型設定為 "gemini-3.1-flash-lite"
-        model = genai.GenerativeModel(model_name="gemini-3.1-flash-lite")
-        
-        current_date = datetime.now().strftime("%Y-%m-%d")
-        jobs_json_str = json.dumps(jobs_list, ensure_ascii=False)
-        
-        email_prompt = f"""
+  if not jobs_list:
+    return "<p>今日國藝會無更新職缺，無需發送報告。</p>"
+
+  try:
+    genai.configure(api_key=api_key)
+    # 💡 同步將模型設定為 "gemini-3.1-flash-lite"
+    model = genai.GenerativeModel(model_name="gemini-3.1-flash-lite")
+
+    current_date = datetime.now().strftime("%Y-%m-%d")
+    jobs_json_str = json.dumps(jobs_list, ensure_ascii=False)
+
+    email_prompt = f"""
         請根據以下提供的國藝會今日職缺 JSON 資料，撰寫一份專業、格式工整、適合直接複製貼進 Gmail/Outlook 的 Email 職缺追蹤報告。
         
         【Email 排版要求】
@@ -138,42 +190,54 @@ def generate_html_email_report(jobs_list):
         【今日職缺 JSON 資料】
         {jobs_json_str}
         """
-        
-        response = model.generate_content(email_prompt)
-        return response.text.strip()
-    except Exception as e:
-        return f"HTML 報告生成失敗: {e}"
+
+    response = model.generate_content(email_prompt)
+    return response.text.strip()
+  except Exception as e:
+    return f"HTML 報告生成失敗: {e}"
+
 
 # 5. 網頁 UI 互動介面
 if st.button("🚀 立即更新今日職缺", type="primary"):
-    data = fetch_and_analyze()
-    
-    if data:
-        st.success(f"🎉 成功找到 {len(data)} 筆今日最新公告職缺！（已啟動跨頁防漏機制）")
-        
-        # 用來 Double Check 的折疊清單
-        with st.expander("🔍 點此展開「職缺原始清單」以進行資料 Double Check"):
-            for index, job in enumerate(data):
-                with st.container():
-                    col1, col2 = st.columns([1, 4])
-                    with col1:
-                        st.info(f"📅 {job.get('date', '未知')}")
-                    with col2:
-                        st.subheader(f"{job.get('organization', '未知')} - {job.get('title', '未知')}")
-                        st.markdown(f"💰 薪資: {job.get('salary', '未知')} | [🔗 詳細內容頁面]({job.get('link')})")
-                    st.divider()
-        
-        st.subheader("📋 今日職缺 Email 商務表格報告")
-        
-        html_email_content = generate_html_email_report(data)
-        
-        # 🌟 最純淨的白色顯影區，不帶任何按鈕或多餘語法，滑鼠直接反白即可完美複製
-        st.markdown(
-            f'<div id="email-content-box" style="border:1px solid #ddd; padding:20px; border-radius:5px; background-color: #ffffff; color: #000000;">'
-            f'{html_email_content}'
-            f'</div>', 
-            unsafe_allow_html=True
-        )
-        
-    else:
-        st.info("今天國藝會目前沒有更新職缺，或者更新的職缺已經被過濾乾淨囉！")
+  data = fetch_and_analyze()
+
+  if data:
+    st.success(
+        f"🎉 成功找到 {len(data)}"
+        " 筆今日最新公告職缺！（已啟動全分頁自動防漏機制）"
+    )
+
+    # 用來 Double Check 的折疊清單
+    with st.expander("🔍 點此展開「職缺原始清單」以進行資料 Double Check"):
+      for index, job in enumerate(data):
+        with st.container():
+          col1, col2 = st.columns([1, 4])
+          with col1:
+            st.info(f"📅 {job.get('date', '未知')}")
+          with col2:
+            st.subheader(
+                f"{job.get('organization', '未知')} -"
+                f" {job.get('title', '未知')}"
+            )
+            st.markdown(
+                f"💰 薪資: {job.get('salary', '未知')} | [🔗"
+                f" 詳細內容頁面]({job.get('link')})"
+            )
+          st.divider()
+
+    st.subheader("📋 今日職缺 Email 商務表格報告")
+
+    html_email_content = generate_html_email_report(data)
+
+    # 🌟 最純淨的白色顯影區，不帶任何按鈕或多餘語法，滑鼠直接反白即可完美複製
+    st.markdown(
+        '<div id="email-content-box" style="border:1px solid #ddd;'
+        " padding:20px; border-radius:5px; background-color: #ffffff; color:"
+        f' #000000;">{html_email_content}</div>',
+        unsafe_allow_html=True,
+    )
+
+  else:
+    st.info(
+        "今天國藝會目前沒有更新職缺，或者更新的職缺已經被過濾乾淨囉！"
+    )
